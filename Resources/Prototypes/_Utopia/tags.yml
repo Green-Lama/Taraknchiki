@@ -18,3 +18,13 @@
 # Grab
 - type: Tag
   id: IgnoreChokeSpeechBlocking
+
+# Economy
+- type: Tag
+  id: UtopiaIgnoreBalanceChecks
+
+- type: Tag
+  id: UtopiaSpaceCash
+
+- type: Tag
+  id: UtopiaDepartamentCard

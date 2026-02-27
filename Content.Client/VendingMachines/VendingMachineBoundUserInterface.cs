@@ -26,8 +26,16 @@ namespace Content.Client.VendingMachines
             _menu = this.CreateWindowCenteredLeft<VendingMachineMenu>();
             _menu.Title = EntMan.GetComponent<MetaDataComponent>(Owner).EntityName;
             _menu.OnItemSelected += OnItemSelected;
+            _menu.OnWithdraw += OnWithdrawPressed; // Utopia-Tweak : Economy
             Refresh();
         }
+
+        // Utopia-Tweak : Economy
+        private void OnWithdrawPressed(VendingMachineWithdrawMessage message)
+        {
+            SendPredictedMessage(new VendingMachineWithdrawMessage());
+        }
+        // Utopia-Tweak : Economy
 
         public void Refresh()
         {
@@ -36,7 +44,24 @@ namespace Content.Client.VendingMachines
             var system = EntMan.System<VendingMachineSystem>();
             _cachedInventory = system.GetAllInventory(Owner);
 
-            _menu?.Populate(_cachedInventory, enabled);
+            if (bendy == null)
+                return;
+
+            // Utopia-Tweak : Economy
+            var multiplier = bendy.PriceMultiplier;
+
+            if (bendy.AllForFree)
+                multiplier = 0;
+            // Utopia-Tweak : Economy
+
+            _menu?.Populate(_cachedInventory, enabled, multiplier); // Utopia-Tweak : Economy
+
+            // Utopia-Tweak : Economy
+            if (bendy.Credits != 0 && !bendy.AllForFree)
+                _menu?.SetCreditsVisible(true);
+
+            _menu?.SetCredits(bendy.Credits);
+            // Utopia-Tweak : Economy
         }
 
         public void UpdateAmounts()
@@ -77,6 +102,7 @@ namespace Content.Client.VendingMachines
                 return;
 
             _menu.OnItemSelected -= OnItemSelected;
+            _menu.OnWithdraw -= OnWithdrawPressed; // Utopia-Tweak : Economy
             _menu.OnClose -= Close;
             _menu.Dispose();
         }
