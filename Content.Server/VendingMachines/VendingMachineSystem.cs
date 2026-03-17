@@ -37,8 +37,8 @@ namespace Content.Server.VendingMachines
         [Dependency] private readonly IdCardSystem _idCard = default!;
         // Utopia-Tweak : Economy
 
-        private const float WallVendEjectDistanceFromWall = 1f;
         private const string IgnoreBalanceCheck = "UtopiaIgnoreBalanceChecks"; // Utopia-Tweak : Economy
+        private const float WallVendEjectDistanceFromWall = 1f;
 
         public override void Initialize()
         {
@@ -314,9 +314,7 @@ namespace Content.Server.VendingMachines
                 return;
 
             if (vendComponent.Ejecting || vendComponent.Broken || !Receiver.IsPowered(uid))
-            {
                 return;
-            }
 
             var entry = GetEntry(uid, itemId, type, vendComponent);
 
@@ -356,6 +354,9 @@ namespace Content.Server.VendingMachines
             if (!TryComp<BankCardComponent>(idCard.Owner, out var bankCard) || bankCard.AccountId == null)
                 return false;
 
+            if (!_bankCard.TryGetAccount(bankCard.AccountId.Value, out var account) || account.IsBlocked)
+                return false;
+
             return _bankCard.TryChangeBalance(bankCard.AccountId.Value, -amount);
         }
 
@@ -364,14 +365,11 @@ namespace Content.Server.VendingMachines
             if (component.AllForFree)
                 return;
 
-            if (args.Handled)
+            if (component.Broken || !Receiver.IsPowered(uid))
                 return;
 
-            if (component.Broken || Receiver.IsPowered(uid))
-                return;
-
-            if (!TryComp<CurrencyComponent>(args.Used, out var currency) ||
-                !currency.Price.ContainsKey(component.CurrencyType))
+            if (!TryComp<CurrencyComponent>(args.Used, out var currency)
+            || !currency.Price.ContainsKey(component.CurrencyType))
                 return;
 
             if (!TryComp<StackComponent>(args.Used, out var stack))
@@ -380,6 +378,7 @@ namespace Content.Server.VendingMachines
             component.Credits += stack.Count;
             Del(args.Used);
             Dirty(uid, component);
+            UpdateUI((uid, component));
             Audio.PlayPvs(component.SoundInsertCurrency, uid);
             args.Handled = true;
         }
@@ -392,17 +391,21 @@ namespace Content.Server.VendingMachines
 
         private void OnWithdrawMessage(EntityUid uid, VendingMachineComponent component, VendingMachineWithdrawMessage args)
         {
-            if (component.Credits <= 0)
+            if (component.Credits == 0)
+            {
+                Deny((uid, component), args.Actor);
                 return;
+            }
 
             if (!IsAuthorized(uid, args.Actor, component))
                 return;
 
             _stackSystem.SpawnAtPosition(component.Credits, PrototypeManager.Index(component.CreditStackPrototype),
                 Transform(uid).Coordinates);
+
             component.Credits = 0;
             Audio.PlayPvs(component.SoundWithdrawCurrency, uid);
-
+            UpdateUI((uid, component));
             Dirty(uid, component);
         }
         // Utopia-Tweak : Economy
