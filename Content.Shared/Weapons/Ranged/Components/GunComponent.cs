@@ -263,6 +263,17 @@ public sealed partial class GunComponent : Component
     /// </summary>
     [DataField]
     public Vector2 DefaultDirection = new Vector2(0, -1);
+
+    // Utopia-Tweak : Gun Shoot Effect
+    [DataField, AutoNetworkedField]
+    public bool ShowGunEffect = false;
+
+    [DataField, AutoNetworkedField]
+    public float GunEffectScale = 0.8f;
+
+    [DataField]
+    public int EffectAngle = 83;
+    // Utopia-Tweak : Gun Shoot Effect
 }
 
 [Flags]
